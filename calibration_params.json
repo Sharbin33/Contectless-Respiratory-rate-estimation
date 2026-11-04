@@ -1,0 +1,29 @@
+{
+  "model_type": "linear_regression",
+  "description": "Forehead skin temperature (\u00b0C) to estimated oral/core temperature (\u00b0C)",
+  "dataset": "UCI Infrared Thermography Temperature Dataset (ID 925)",
+  "dataset_source": "Wang et al. (2021), 1020 subjects",
+  "dataset_temp_scale": "celsius",
+  "feature_column_used": "T_FHCC1",
+  "target_column_used": "aveOralF",
+  "n_samples": 1018,
+  "slope": 0.2507801808063477,
+  "intercept": 28.30811121687087,
+  "mae_celsius": 0.23623007422129233,
+  "r_squared": 0.1901636949925819,
+  "correlation": 0.4360776249620955,
+  "forehead_temp_range_c": {
+    "min": 31.05,
+    "max": 37.125
+  },
+  "oral_temp_range_c": {
+    "min": 35.75,
+    "max": 39.6
+  },
+  "honesty_notes": [
+    "This calibration was fitted on a specific IR camera setup (Wang et al. 2021) \u2014 different cameras/distances/environments will shift the relationship.",
+    "The dataset provides pre-extracted facial temperatures, NOT raw pixel intensities from YOUR camera.",
+    "Using this calibration with grayscale pixel intensity from a different thermal camera requires an additional mapping step (pixel intensity -> skin temperature) that is camera-specific.",
+    "Label output as 'Calibrated (reference dataset)' \u2014 NOT 'Clinically Validated'."
+  ]
+}

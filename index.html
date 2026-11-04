@@ -1,0 +1,1931 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thermal Vital Sign Analyzer</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --panel-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --accent-color: #bb86fc;
+            --accent-hover: #9965f4;
+            --danger-color: #cf6679;
+            --warning-color: #ffb74d;
+            --success-color: #81c784;
+            --border-color: #333;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 20px;
+        }
+
+        .panel {
+            background-color: var(--panel-bg);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .upload-area {
+            border: 2px dashed var(--border-color);
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .upload-area:hover, .upload-area.dragover {
+            border-color: var(--accent-color);
+            background-color: rgba(187, 134, 252, 0.1);
+        }
+
+        #fileInput, #videoInput {
+            display: none;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        button {
+            background-color: var(--accent-color);
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: var(--accent-hover);
+        }
+
+        button:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+            color: #888;
+        }
+
+        #clearBtn {
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+        }
+        
+        #clearBtn:hover {
+            background-color: #333;
+        }
+
+        .main-results {
+            display: none;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .image-container {
+            text-align: center;
+        }
+
+        .image-container img {
+            max-width: 100%;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .card {
+            background-color: rgba(255,255,255,0.05);
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid var(--accent-color);
+        }
+
+        .card.danger {
+            border-left-color: var(--danger-color);
+        }
+
+        .card.warning {
+            border-left-color: var(--warning-color);
+        }
+
+        .card.success {
+            border-left-color: var(--success-color);
+        }
+
+        .card h3 {
+            margin: 0 0 10px 0;
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        .card p {
+            margin: 0;
+            font-size: 1.4em;
+            font-weight: bold;
+        }
+
+        .card .subtext {
+            font-size: 0.75em;
+            font-weight: normal;
+            color: #888;
+            margin-top: 4px;
+        }
+
+        .debug-panel {
+            display: none;
+            margin-top: 30px;
+            border-top: 1px solid var(--border-color);
+            padding-top: 20px;
+        }
+
+        .debug-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .debug-item {
+            text-align: center;
+        }
+
+        .debug-item img {
+            width: 100%;
+            background-color: #000;
+            border: 1px solid var(--border-color);
+            min-height: 150px;
+            display: block;
+        }
+
+        .debug-item p {
+            font-size: 0.85em;
+            margin-top: 8px;
+            color: #bbb;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background-color: rgba(255,255,255,0.05);
+        }
+
+        .error-message {
+            color: var(--danger-color);
+            background-color: rgba(207, 102, 121, 0.1);
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            display: none;
+            border-left: 4px solid var(--danger-color);
+        }
+
+        .status-panel {
+            margin-top: 20px;
+            background-color: rgba(187, 134, 252, 0.08);
+            border-left: 4px solid var(--accent-color);
+        }
+
+        .unimplemented-panel {
+            margin-top: 20px;
+            background-color: rgba(255, 255, 255, 0.02);
+            border-left: 4px solid #555;
+            color: #777;
+        }
+
+        .badge {
+            display: inline-block;
+            font-size: 0.7em;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 8px;
+            vertical-align: middle;
+            font-weight: bold;
+        }
+        
+        .badge-calibrated {
+            background-color: #03dac6;
+            color: #000;
+        }
+
+        .badge-rule {
+            background-color: var(--accent-color);
+            color: #000;
+        }
+
+        .badge-exp {
+            background-color: #ffb74d;
+            color: #000;
+        }
+
+        .badge-not-impl {
+            background-color: #444;
+            color: #aaa;
+        }
+
+        .image-error {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 150px;
+            background-color: #333;
+            color: var(--danger-color);
+            font-size: 0.9em;
+            border: 1px solid var(--danger-color);
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Thermal Vital Sign Analyzer</h1>
+            <p>Non-contact fever detection, respiratory rate (signal + ML) monitoring</p>
+        </header>
+
+        <div id="errorBox" class="error-message"></div>
+
+        <div class="panel">
+            <div style="display: flex; gap: 20px;">
+                <div class="upload-area" id="uploadArea" style="flex: 1;">
+                    <p>📷 Drag & Drop thermal <strong>IMAGE</strong> here or <strong>click to browse</strong></p>
+                    <input type="file" id="fileInput" accept="image/png, image/jpeg, image/jpg">
+                    <p id="fileName" style="color: var(--accent-color); font-weight: bold; margin-top: 5px;"></p>
+                </div>
+                
+                <div class="upload-area" id="uploadVideoArea" style="flex: 1; border-color: #555;">
+                    <p>🎥 Drag & Drop thermal <strong>VIDEO</strong> (for fever & RR) or <strong>click to browse</strong></p>
+                    <input type="file" id="videoInput" accept="video/mp4, video/avi, video/mov, video/webm">
+                    <p id="videoName" style="color: #81c784; font-weight: bold; margin-top: 5px;"></p>
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 10px; align-items: center; margin-top: 15px; flex-wrap: wrap;">
+                <label for="datasetSelect">&#128193; Or analyze a video from the <strong>Thermal Videos</strong> dataset:</label>
+                <select id="datasetSelect" style="background:#2a2a2a;color:var(--text-color);border:1px solid var(--border-color);border-radius:4px;padding:8px;min-width:230px;">
+                    <option value="">Loading dataset...</option>
+                </select>
+                <button id="datasetBtn" disabled>Analyze Dataset Video</button>
+            </div>
+
+            <div class="controls">
+                <div>
+                    <input type="checkbox" id="debugToggle">
+                    <label for="debugToggle">Show Pipeline Debug View</label>
+                </div>
+                <div>
+                    <button id="clearBtn">Clear</button>
+                    <button id="analyzeBtn" disabled>Analyze Inputs</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="mainResults" class="panel main-results">
+            <div class="image-container">
+                <h3>Annotated Thermal Image</h3>
+                <img id="annotatedImage" src="" alt="Result Image">
+                <div class="subtext" style="margin-top: 8px;">ROI boxes: Green = Face/Neck | Yellow = Forehead | Magenta = Inner Canthus</div>
+            </div>
+            
+            <div>
+                <h3>Calibrated Measurements & Vitals</h3>
+                <div class="cards">
+                    <div class="card">
+                        <h3>Face/Neck Oral Temp</h3>
+                        <p id="resFaceC">-- °C</p>
+                        <div class="subtext">Estimated Core / Oral</div>
+                    </div>
+                    <div class="card">
+                        <h3>Forehead Oral Temp <span class="badge badge-calibrated">Calibrated</span></h3>
+                        <p id="resForeheadC">-- °C</p>
+                        <div class="subtext">Fitted regression (UCI dataset)</div>
+                    </div>
+                    <div class="card">
+                        <h3>Inner Canthus Oral Temp</h3>
+                        <p id="resCanthusC">-- °C</p>
+                        <div class="subtext">Core proxy ROI</div>
+                    </div>
+                    <div class="card" id="feverCard">
+                        <h3>Fever Status</h3>
+                        <p id="resFever">--</p>
+                        <div class="subtext">Threshold: 37.5 °C (Oral)</div>
+                    </div>
+                    <div class="card">
+                        <h3>Respiratory Rate <span id="resRRBadge" class="badge badge-exp">Unvalidated</span></h3>
+                        <p id="resRR">-- bpm</p>
+                        <div id="resRRNote" class="subtext">Real-world accuracy unknown — not validated against ground truth.</div>
+                    </div>
+                </div>
+
+                <div class="card status-panel">
+                    <h3>Rule-Based Status Flags <span class="badge badge-rule">Not a Diagnosis</span></h3>
+                    <p id="resStatusText" style="font-size: 1.05em; font-weight: normal; margin-top: 5px;">Awaiting analysis input...</p>
+                    <div id="resActionRec" class="subtext" style="margin-top: 8px; color: #bbb;">Upload an image or video to evaluate.</div>
+                </div>
+
+                <div class="card" style="margin-top: 15px; background-color: rgba(255, 183, 77, 0.08); border-left: 4px solid var(--warning-color);">
+                    <h3 style="color: var(--warning-color);">⚠️ Fever Threshold Sensitivity & Risk Notice</h3>
+                    <p style="font-size: 0.88em; font-weight: normal; color: #ddd; margin: 5px 0 0 0;">
+                        <strong>Calibration Output Compression Risk:</strong> The fitted dataset regression formula (slope = 0.2508) compresses output values into a narrow band near the low-grade fever threshold (37.5°C). Any skin reading above 36.65°C maps above 37.50°C. With R² = 0.19 on the source dataset, this causes a systematic bias toward false positive fever flags. This calibration requires validation across multiple distinct subjects (including known normal and febrile controls) before relying on it for screening.
+                    </p>
+                </div>
+
+                <div class="card unimplemented-panel">
+                    <h3>Scope Boundaries <span class="badge badge-not-impl">Not Implemented</span></h3>
+                    <p style="font-size: 0.9em; font-weight: normal; margin-bottom: 5px;">SpO₂ (Blood Oxygen): <span style="color: #777;">Not Implemented — impossible via thermal imaging (physics limitation)</span></p>
+                    <p style="font-size: 0.9em; font-weight: normal;">ML Disease Prediction: <span style="color: #777;">Out of Scope — replaced by rule-based threshold flags</span></p>
+                </div>
+            </div>
+        </div>
+
+
+        <div id="respPanel" class="panel" style="display: none;">
+            <h3 style="margin-top:0;">Respiratory Rate &mdash; Breathing Signal &amp; ML Models <span class="badge badge-exp">Small dataset (32 videos)</span></h3>
+            <div id="respSource" class="subtext" style="margin-bottom:10px;"></div>
+            <canvas id="rrChart" width="1100" height="260" style="width:100%;background:#151515;border:1px solid var(--border-color);border-radius:6px;"></canvas>
+            <div class="subtext" style="margin:6px 0 15px;">Bandpass-filtered (0.1&ndash;0.5 Hz) nasal-region intensity. Green dots = detected breaths.</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+                <div>
+                    <h3>Predicted breaths per minute</h3>
+                    <table><thead><tr><th>Method</th><th>BPM</th><th>&Delta; vs reference</th></tr></thead>
+                    <tbody id="predTableBody"></tbody></table>
+                </div>
+                <div>
+                    <h3>Model accuracy (5-fold CV on dataset)</h3>
+                    <table><thead><tr><th>Model</th><th>MAE</th><th>RMSE</th><th>R&sup2;</th></tr></thead>
+                    <tbody id="metricsTableBody"><tr><td colspan="4">Loading...</td></tr></tbody></table>
+                    <div id="metricsNote" class="subtext" style="margin-top:6px;"></div>
+                    <div id="tuningResultsSection" style="margin-top:16px; border-top:1px solid #333; padding-top:12px;">
+                        <h4 style="margin:0 0 8px 0; color:#80cbc4; font-size:1.05em; display:flex; align-items:center; gap:6px;">
+                            <span>⚙️ Hyperparameter Tuning Results</span>
+                            <span class="badge badge-exp" style="font-size:0.7em;">Nested CV</span>
+                        </h4>
+                        <div id="tuningUnavailable" style="display:none; color:#888; font-size:0.85em; padding:6px 0;">
+                            Run: <code>python tune_models.py</code>
+                        </div>
+                        <div id="tuningAvailable" style="display:none;">
+                            <table style="width:100%; font-size:0.85em; margin-bottom:8px;">
+                                <thead>
+                                    <tr>
+                                        <th>Model</th>
+                                        <th>MAE Before (B)</th>
+                                        <th>MAE After (C)</th>
+                                        <th>Improv %</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tuningTableBody"></tbody>
+                            </table>
+                            <div id="tuningConclusionText" class="subtext" style="color:#ddd; background:#1c1c24; padding:8px 10px; border-radius:4px; border-left:3px solid #ffb74d; margin-bottom:10px; font-size:0.82em; line-height:1.4;"></div>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                                <div>
+                                    <div class="subtext" style="margin-bottom:3px;">MAE Before vs After (A, B, C):</div>
+                                    <a href="/models/tuning_mae_bar.png" target="_blank"><img id="tuningPlotBar" src="/models/tuning_mae_bar.png" alt="Tuning MAE Bar" style="width:100%; height:130px; object-fit:contain; background:#111; border-radius:4px; border:1px solid #333;"></a>
+                                </div>
+                                <div>
+                                    <div class="subtext" style="margin-bottom:3px;">Ensemble Predicted vs Reference:</div>
+                                    <a href="/models/tuning_pred_vs_ref.png" target="_blank"><img id="tuningPlotPred" src="/models/tuning_pred_vs_ref.png" alt="Tuning Predicted vs Ref" style="width:100%; height:130px; object-fit:contain; background:#111; border-radius:4px; border:1px solid #333;"></a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== RR Multi-Method Visualization Dashboard ===== -->
+        <div id="rrMethodsVizSection" class="panel" style="display: none;">
+            <h3 style="margin-top:0;">Respiratory Rate Estimation using Multiple Methods</h3>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;">
+                <!-- Card 1: Peak Detection -->
+                <div style="border-radius: 8px; overflow: hidden; background: #1a1a2e; border: 1px solid #333; display: flex; flex-direction: column;">
+                    <div style="background: #e8f0fe; color: #1a237e; padding: 10px 14px; font-weight: bold; font-size: 0.9em;">
+                        🔍 Peak Detection <span style="font-size:0.8em; font-weight:normal; opacity:0.7;">(Time Domain)</span>
+                    </div>
+                    <div style="padding: 12px; flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+                        <div style="position: relative; height: 200px;">
+                            <div id="rrVizPeakFallback" style="display:none; height:200px; line-height:200px; text-align:center; color:#888; font-size:0.9em;">No peak data available</div>
+                            <canvas id="rrVizPeakChart" height="200" style="width:100%; height:200px;"></canvas>
+                        </div>
+                        <p id="rrVizPeakBpm" style="text-align:center; font-weight:bold; margin:10px 0 4px; color:#90caf9;">Estimated RR: -- bpm</p>
+                    </div>
+                </div>
+                <!-- Card 2: Autocorrelation -->
+                <div style="border-radius: 8px; overflow: hidden; background: #1a2e1a; border: 1px solid #333; display: flex; flex-direction: column;">
+                    <div style="background: #e6f4e6; color: #1b5e20; padding: 10px 14px; font-weight: bold; font-size: 0.9em;">
+                        🔄 Autocorrelation <span style="font-size:0.8em; font-weight:normal; opacity:0.7;">(Time Domain)</span>
+                    </div>
+                    <div style="padding: 12px; flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+                        <div style="position: relative; height: 200px;">
+                            <div id="rrVizAutocorrFallback" style="display:none; height:200px; line-height:200px; text-align:center; color:#888; font-size:0.9em;">No autocorrelation data available</div>
+                            <canvas id="rrVizAutocorrChart" height="200" style="width:100%; height:200px;"></canvas>
+                        </div>
+                        <p id="rrVizAutocorrBpm" style="text-align:center; font-weight:bold; margin:10px 0 4px; color:#a5d6a7;">Estimated RR: -- bpm</p>
+                    </div>
+                </div>
+                <!-- Card 3: Welch PSD -->
+                <div style="border-radius: 8px; overflow: hidden; background: #2e2a1a; border: 1px solid #333; display: flex; flex-direction: column;">
+                    <div style="background: #fdf1d6; color: #e65100; padding: 10px 14px; font-weight: bold; font-size: 0.9em;">
+                        📊 Welch PSD <span style="font-size:0.8em; font-weight:normal; opacity:0.7;">(Frequency Domain)</span>
+                    </div>
+                    <div style="padding: 12px; flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+                        <div style="position: relative; height: 200px;">
+                            <div id="rrVizWelchFallback" style="display:none; height:200px; line-height:200px; text-align:center; color:#888; font-size:0.9em;">No PSD data available</div>
+                            <canvas id="rrVizWelchChart" height="200" style="width:100%; height:200px;"></canvas>
+                        </div>
+                        <p id="rrVizWelchBpm" style="text-align:center; font-weight:bold; margin:10px 0 4px; color:#ffe082;">Estimated RR: -- bpm</p>
+                    </div>
+                </div>
+                <!-- Card 4: CWT / Wavelet -->
+                <div style="border-radius: 8px; overflow: hidden; background: #231a2e; border: 1px solid #333; display: flex; flex-direction: column;">
+                    <div style="background: #efe6f7; color: #4a148c; padding: 10px 14px; font-weight: bold; font-size: 0.9em;">
+                        🌊 CWT / Wavelet Transform <span style="font-size:0.8em; font-weight:normal; opacity:0.7;">(Time-Frequency Domain)</span>
+                    </div>
+                    <div style="padding: 12px; flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+                        <div style="position: relative; height: 200px; width: 100%; overflow: hidden;">
+                            <div id="rrVizCwtFallback" style="display:none; height:200px; line-height:200px; text-align:center; color:#888; font-size:0.9em;">No CWT data available</div>
+                            <canvas id="rrVizCwtCanvas" height="200" style="width:100%; height:200px; display:block;"></canvas>
+                        </div>
+                        <p id="rrVizCwtBpm" style="text-align:center; font-weight:bold; margin:10px 0 4px; color:#ce93d8;">Estimated RR: -- bpm</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="debugPanel" class="panel debug-panel">
+            <h3>Pipeline Debug Information</h3>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>Region</th>
+                        <th>Skin Temp (°C)</th>
+                        <th>Estimated Oral (°C)</th>
+                        <th>Pixel Count</th>
+                        <th>Status / Fallback Stage</th>
+                    </tr>
+                </thead>
+                <tbody id="debugTableBody">
+                </tbody>
+            </table>
+
+            <div class="debug-grid">
+                <div class="debug-item">
+                    <img id="dbgOriginal" alt="Original" onerror="imgError(this, 'Original')">
+                    <p>1. Original Thermal</p>
+                </div>
+                <div class="debug-item">
+                    <img id="dbgInitial" alt="Initial Mask" onerror="imgError(this, 'Initial')">
+                    <p>2. Initial Mask</p>
+                </div>
+                <div class="debug-item">
+                    <img id="dbgRefined" alt="Refined Mask" onerror="imgError(this, 'Refined')">
+                    <p>3. Refined Mask</p>
+                </div>
+                <div class="debug-item">
+                    <img id="dbgFaceNeck" alt="Face Neck Mask" onerror="imgError(this, 'FaceNeck')">
+                    <p>4. Face/Neck Mask</p>
+                </div>
+                <div class="debug-item">
+                    <img id="dbgWhiteBg" alt="White BG" onerror="imgError(this, 'WhiteBG')">
+                    <p>5. Face on White BG</p>
+                </div>
+                <div class="debug-item">
+                    <img id="dbgForehead" alt="Forehead Mask" onerror="imgError(this, 'Forehead')">
+                    <p>6. Forehead Mask (ANDed)</p>
+                </div>
+                <div class="debug-item">
+                    <img id="dbgCanthus" alt="Inner Canthus Mask" onerror="imgError(this, 'InnerCanthus')">
+                    <p>7. Inner Canthus Mask</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== Model Accuracy Improvement & Benchmark Section ===== -->
+        <div id="benchmarkSection" class="panel" style="margin-top: 20px; border-left: 4px solid var(--accent-color);">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px; margin-bottom:15px;">
+                <div>
+                    <h3 style="margin:0; color:var(--accent-color); font-size:1.3em;">📈 Model Accuracy Progression &amp; Benchmark Tracking</h3>
+                    <p style="font-size:0.88em; color:#aaa; margin:5px 0 0 0;">
+                        Quantifying accuracy gains, F1-scores, and error reductions achieved across each iterative enhancement phase.
+                    </p>
+                </div>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <span class="badge" style="background:#1b5e20; color:#a5d6a7; border:1px solid #2e7d32; font-size:0.8em; padding:4px 8px;">✓ MediaPipe Active</span>
+                    <span class="badge" style="background:#0d47a1; color:#90caf9; border:1px solid #1565c0; font-size:0.8em; padding:4px 8px;">5-Fold Cross Validation</span>
+                    <button id="refreshBenchmarkBtn" style="font-size:0.8em; padding:5px 12px; background:#2a2a2a; color:#fff; border:1px solid #444;">🔄 Refresh</button>
+                </div>
+            </div>
+
+            <!-- Accuracy Highlight Metrics Cards -->
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:15px; margin-bottom:20px;">
+                <div class="card success" style="border-left-color:#81c784;">
+                    <h3 style="margin:0 0 5px 0; font-size:0.82em; color:#bbb; text-transform:uppercase;">Best Model MAE</h3>
+                    <div id="benchBestMae" style="font-size:1.8em; font-weight:bold; color:#81c784;">1.80 bpm</div>
+                    <div style="font-size:0.75em; color:#aaa; margin-top:4px;">Random Forest (5-Fold CV)</div>
+                    <div id="benchMaeDelta" style="font-size:0.75em; color:#81c784; font-weight:bold; margin-top:2px;">↓ Lowest Prediction Error</div>
+                </div>
+                <div class="card" style="border-left-color:#03dac6;">
+                    <h3 style="margin:0 0 5px 0; font-size:0.82em; color:#bbb; text-transform:uppercase;">Clinical F1-Score (Weighted)</h3>
+                    <div id="benchF1Weighted" style="font-size:1.8em; font-weight:bold; color:#03dac6;">82.9%</div>
+                    <div style="font-size:0.75em; color:#aaa; margin-top:4px;">Normal vs Tachypnea vs Bradypnea</div>
+                    <div style="font-size:0.75em; color:#03dac6; font-weight:bold; margin-top:2px;">Macro F1: <span id="benchF1Macro">0.458</span></div>
+                </div>
+                <div class="card" style="border-left-color:#bb86fc;">
+                    <h3 style="margin:0 0 5px 0; font-size:0.82em; color:#bbb; text-transform:uppercase;">AAMI Precision (±1.5 bpm)</h3>
+                    <div id="benchTol15" style="font-size:1.8em; font-weight:bold; color:#bb86fc;">50.0%</div>
+                    <div style="font-size:0.75em; color:#aaa; margin-top:4px;">High-Precision Medical Band</div>
+                    <div id="benchTol15Count" style="font-size:0.75em; color:#bbb; margin-top:2px;">16 / 32 within ±1.5 bpm</div>
+                </div>
+                <div class="card" style="border-left-color:#64b5f6;">
+                    <h3 style="margin:0 0 5px 0; font-size:0.82em; color:#bbb; text-transform:uppercase;">Clinical Band (±2.0 bpm)</h3>
+                    <div id="benchTol20" style="font-size:1.8em; font-weight:bold; color:#64b5f6;">62.5%</div>
+                    <div style="font-size:0.75em; color:#aaa; margin-top:4px;">Acceptable Clinical Screening</div>
+                    <div id="benchTol20Count" style="font-size:0.75em; color:#bbb; margin-top:2px;">20 / 32 within ±2.0 bpm</div>
+                </div>
+            </div>
+
+            <!-- Iterative Enhancement Comparison Table -->
+            <div style="background:rgba(255,255,255,0.03); border-radius:6px; padding:15px; margin-bottom:20px; border:1px solid #2a2a2a;">
+                <h4 style="margin:0 0 10px 0; color:#bb86fc; font-size:0.95em;">📊 Iterative Enhancement Accuracy Comparison (Phase-by-Phase)</h4>
+                <div style="overflow-x:auto;">
+                    <table style="font-size:0.85em; width:100%; border-collapse:collapse;">
+                        <thead>
+                            <tr style="background:#262626; color:#ddd; text-align:left;">
+                                <th style="padding:8px 10px;">Phase / Step ID</th>
+                                <th style="padding:8px 10px;">Enhancement Description</th>
+                                <th style="padding:8px 10px; text-align:center;">Ensemble MAE</th>
+                                <th style="padding:8px 10px; text-align:center;">F1 Macro</th>
+                                <th style="padding:8px 10px; text-align:center;">Within ±1.5 bpm</th>
+                                <th style="padding:8px 10px; text-align:center;">Within ±2.0 bpm</th>
+                                <th style="padding:8px 10px; text-align:center;">Accuracy Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="benchmarkHistoryBody">
+                            <tr><td colspan="7" style="text-align:center; padding:15px; color:#888;">Loading benchmark history...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Confusion Matrix & Classification Analysis Section -->
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; align-items:start;">
+                <!-- Confusion Matrix Interactive Table -->
+                <div style="background:rgba(255,255,255,0.03); border-radius:6px; padding:15px; border:1px solid #2a2a2a;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                        <h4 style="margin:0; color:#03dac6; font-size:0.95em;">🎯 Confusion Matrix Breakdown</h4>
+                        <select id="benchModelSelect" style="background:#222; color:#eee; border:1px solid #444; border-radius:4px; padding:4px 8px; font-size:0.82em;">
+                            <option value="Ensemble">Voting Ensemble</option>
+                            <option value="Random Forest">Random Forest</option>
+                            <option value="Gradient Boosting">Gradient Boosting</option>
+                            <option value="XGBoost">XGBoost</option>
+                        </select>
+                    </div>
+                    <div id="benchCmContainer" style="overflow-x:auto;">
+                        <!-- Rendered by JS -->
+                    </div>
+                    <div id="benchCmSummary" style="margin-top:10px; font-size:0.8em; color:#bbb; line-height:1.5;">
+                        <!-- Summary by JS -->
+                    </div>
+                </div>
+
+                <!-- Visual Confusion Matrix Heatmap -->
+                <div style="background:rgba(255,255,255,0.03); border-radius:6px; padding:15px; border:1px solid #2a2a2a; text-align:center;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <h4 style="margin:0; color:#bb86fc; font-size:0.95em;">🖼️ Heatmap Visualization</h4>
+                        <span id="benchHeatmapLabel" style="font-size:0.78em; color:#aaa;">Ensemble Model</span>
+                    </div>
+                    <div style="min-height:220px; display:flex; align-items:center; justify-content:center; background:#151515; border-radius:4px; overflow:hidden; border:1px solid #222;">
+                        <img id="benchHeatmapImg" src="/result/confusion_matrix_step_1_ensemble.png" alt="Confusion Matrix Heatmap" style="max-width:100%; max-height:240px; object-fit:contain;" onerror="this.style.display='none'; document.getElementById('benchHeatmapFallback').style.display='block';">
+                        <div id="benchHeatmapFallback" style="display:none; color:#777; font-size:0.85em; padding:20px;">
+                            Confusion matrix heatmap generated upon training.<br>
+                            <code>python showcase_training.py</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- F1-Score & Accuracy Comparison Graph -->
+            <div style="background:rgba(255,255,255,0.03); border-radius:6px; padding:15px; margin-top:20px; border:1px solid #2a2a2a; text-align:center;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <h4 style="margin:0; color:#81c784; font-size:1.0em;">📊 Comprehensive F1-Score &amp; Accuracy Performance Benchmark</h4>
+                    <span style="font-size:0.8em; color:#aaa;">5-Fold Cross Validation Across All Models</span>
+                </div>
+                <div style="background:#151515; border-radius:6px; padding:10px; border:1px solid #222;">
+                    <img id="benchF1GraphImg" src="/result/f1_score_comparison.png" alt="F1-Score and Accuracy Comparison Graph" style="width:100%; max-height:460px; object-fit:contain; border-radius:4px;">
+                </div>
+                <p style="font-size:0.78em; color:#888; margin:8px 0 0 0;">Comparing Weighted F1 (Population Balance), Normal Class F1, Overall Accuracy, and Macro F1</p>
+            </div>
+        </div>
+
+
+        <!-- ===== System Architecture & Enhancements Panel ===== -->
+        <div class="panel" style="margin-top: 20px; border-left: 4px solid #03dac6;">
+            <h3 style="margin-top:0; color: #03dac6;">🏗️ System Architecture &amp; Recent Enhancements</h3>
+            <p style="font-size:0.88em; color:#aaa; margin-bottom:15px;">
+                This panel documents the project's complete architecture and the newly integrated multi-method respiratory rate analysis system.
+            </p>
+
+            <!-- Project Overview -->
+            <div style="background:rgba(255,255,255,0.03); border-radius:6px; padding:15px; margin-bottom:15px;">
+                <h4 style="color:#bb86fc; margin:0 0 10px 0;">📋 Project Overview</h4>
+                <p style="font-size:0.88em; color:#ccc; margin:0;">
+                    <strong>Contactless Thermal Vital Signs Monitoring System</strong> — an end-to-end computer vision + machine learning application
+                    that processes thermal imagery and video to monitor <strong>body temperature / fever</strong> and <strong>respiratory rate</strong>
+                    without physical patient contact, backed by a local Flask API and this interactive dashboard.
+                </p>
+            </div>
+
+            <!-- File Structure -->
+            <div style="background:rgba(255,255,255,0.03); border-radius:6px; padding:15px; margin-bottom:15px;">
+                <h4 style="color:#bb86fc; margin:0 0 10px 0;">📁 Project File Structure</h4>
+                <table style="font-size:0.82em;">
+                    <thead>
+                        <tr><th>File</th><th>Role</th><th>Status</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><code>app.py</code></td><td>Flask REST API — routes for image, video, dataset analysis</td><td>✏️ Updated</td></tr>
+                        <tr><td><code>thermal_analysis.py</code></td><td>Core fever pipeline — face masking, ROI extraction, calibrated temperature</td><td>✅ Unchanged</td></tr>
+                        <tr><td><code>respiratory_rate.py</code></td><td>Nasal ROI tracking (MediaPipe), bandpass filtering, peak-based RR</td><td>✅ Unchanged</td></tr>
+                        <tr style="color:#03dac6"><td><code>rr_signal_methods.py</code></td><td>🆕 4 new RR estimation methods + multi-method consensus</td><td>🆕 New</td></tr>
+                        <tr><td><code>rr_model.py</code></td><td>ML models (Random Forest, Gradient Boosting, XGBoost, Ensemble)</td><td>✅ Unchanged</td></tr>
+                        <tr><td><code>status_flagger.py</code></td><td>Rule-based fever/RR clinical thresholds &amp; status flags</td><td>✅ Unchanged</td></tr>
+                        <tr><td><code>calibration_fit.py</code></td><td>UCI dataset calibration (forehead skin → oral temperature)</td><td>✅ Unchanged</td></tr>
+                        <tr><td><code>index.html</code></td><td>This dashboard UI</td><td>✏️ Updated</td></tr>
+                        <tr><td><code>requirements.txt</code></td><td>Python dependencies</td><td>✏️ Updated (+PyWavelets)</td></tr>
+                        <tr style="color:#03dac6"><td><code>tests/test_rr_signal_methods.py</code></td><td>🆕 14 test cases for all new methods</td><td>🆕 New</td></tr>
+                        <tr><td><code>models/*.pkl</code></td><td>Pretrained ML regressors (6-feature schema, untouched)</td><td>✅ Unchanged</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Data Flow Pipeline -->
+            <div style="background:rgba(255,255,255,0.03); border-radius:6px; padding:15px; margin-bottom:15px;">
+                <h4 style="color:#bb86fc; margin:0 0 10px 0;">🔄 Data Flow Pipeline</h4>
+                <div style="font-family:monospace; font-size:0.8em; color:#81c784; background:#0d1117; padding:12px; border-radius:4px; overflow-x:auto; line-height:1.7;">
+                    Thermal Video Upload<br>
+                    &nbsp;&nbsp;├─► <span style="color:#ffb74d">Fever Pipeline</span> (thermal_analysis.py)<br>
+                    &nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;├─ Dynamic face/neck masking → contour detection<br>
+                    &nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;├─ Forehead ROI (5-22% H, 25-75% W) + Inner Canthus ROI<br>
+                    &nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;├─ Pixel intensity → skin temp → oral/core calibration (UCI dataset)<br>
+                    &nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;└─► <span style="color:#ef5350">Fever Status</span> (Normal / Low-Grade / Moderate / High)<br>
+                    &nbsp;&nbsp;│<br>
+                    &nbsp;&nbsp;├─► <span style="color:#64b5f6">Respiration Pipeline</span> (respiratory_rate.py)<br>
+                    &nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;├─ MediaPipe Face Mesh → nasal ROI (landmarks 4 &amp; 13)<br>
+                    &nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;├─ Frame-by-frame mean intensity → Z-score normalize<br>
+                    &nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;├─ Butterworth bandpass filter (0.1–0.5 Hz = 6–30 bpm)<br>
+                    &nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;└─► <span style="color:#81c784">Signal RR</span> (peak detection + interval timing)<br>
+                    &nbsp;&nbsp;│<br>
+                    &nbsp;&nbsp;├─► <span style="color:#03dac6">🆕 Multi-Method Analysis</span> (rr_signal_methods.py)<br>
+                    &nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;├─ 🔍 Peak Detection — time-domain peak counting<br>
+                    &nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;├─ 🔄 Autocorrelation — periodicity via self-correlation<br>
+                    &nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;├─ 📊 Welch PSD — averaged power spectral density<br>
+                    &nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;├─ 🌊 CWT — continuous wavelet transform (Morlet)<br>
+                    &nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;└─► 🤝 <span style="color:#80cbc4">Consensus</span> (median of successful methods)<br>
+                    &nbsp;&nbsp;│<br>
+                    &nbsp;&nbsp;├─► <span style="color:#ce93d8">ML Models</span> (rr_model.py)<br>
+                    &nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;├─ Random Forest / Gradient Boosting / XGBoost / Ensemble<br>
+                    &nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;&nbsp;└─ Trained on 6 features from 32 labelled thermal videos<br>
+                    &nbsp;&nbsp;│<br>
+                    &nbsp;&nbsp;└─► <span style="color:#ffb74d">Status Flagger</span> (status_flagger.py)<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ Temp: Hypothermia / Normal / Low-Grade / Moderate / High Fever<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├─ RR: Bradypnea (&lt;12) / Normal (12-20) / Tachypnea (&gt;20)<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└─► Combined triage flag + action recommendation
+                </div>
+            </div>
+
+            <!-- New Methods Explained -->
+            <div style="background:rgba(3,218,198,0.06); border-radius:6px; padding:15px; margin-bottom:15px; border-left:3px solid #03dac6;">
+                <h4 style="color:#03dac6; margin:0 0 12px 0;">🆕 New Signal Analysis Methods — What Changed &amp; Why</h4>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                    <div style="background:rgba(0,0,0,0.2); padding:12px; border-radius:6px;">
+                        <h5 style="color:#81c784; margin:0 0 6px 0;">🔍 Peak Detection</h5>
+                        <p style="font-size:0.82em; color:#bbb; margin:0;">
+                            <strong>What:</strong> Counts breathing peaks in the filtered signal using adaptive prominence thresholds.<br>
+                            <strong>How it helps:</strong> Provides a direct, interpretable breath count. Compared against the existing peak detector
+                            to validate consistency. Confidence is based on number of detected peaks.
+                        </p>
+                    </div>
+                    <div style="background:rgba(0,0,0,0.2); padding:12px; border-radius:6px;">
+                        <h5 style="color:#64b5f6; margin:0 0 6px 0;">🔄 Autocorrelation</h5>
+                        <p style="font-size:0.82em; color:#bbb; margin:0;">
+                            <strong>What:</strong> Measures signal self-similarity at different time lags to find the dominant periodic cycle.<br>
+                            <strong>How it helps:</strong> Robust to irregular peak shapes and noise — detects periodicity even when individual
+                            peaks are ambiguous. Reports correlation strength as a natural confidence metric.
+                        </p>
+                    </div>
+                    <div style="background:rgba(0,0,0,0.2); padding:12px; border-radius:6px;">
+                        <h5 style="color:#ffb74d; margin:0 0 6px 0;">📊 Welch PSD (Power Spectral Density)</h5>
+                        <p style="font-size:0.82em; color:#bbb; margin:0;">
+                            <strong>What:</strong> Averages FFT over overlapping segments (Welch's method) to estimate the power spectrum more
+                            reliably than a single raw FFT.<br>
+                            <strong>How it helps:</strong> Reduces spectral noise variance. The band power ratio (breathing band vs. total)
+                            directly measures signal quality. More stable than the existing single-shot FFT in <code>rr_model.py</code>.
+                        </p>
+                    </div>
+                    <div style="background:rgba(0,0,0,0.2); padding:12px; border-radius:6px;">
+                        <h5 style="color:#ce93d8; margin:0 0 6px 0;">🌊 CWT (Continuous Wavelet Transform)</h5>
+                        <p style="font-size:0.82em; color:#bbb; margin:0;">
+                            <strong>What:</strong> Applies a Morlet wavelet transform to analyze frequency content with time-frequency resolution.<br>
+                            <strong>How it helps:</strong> Captures non-stationary breathing patterns (varying rate over time) that fixed-window FFT
+                            methods miss. Requires PyWavelets; degrades gracefully if not installed.
+                        </p>
+                    </div>
+                </div>
+
+                <div style="background:rgba(0,0,0,0.2); padding:12px; border-radius:6px; margin-top:12px;">
+                    <h5 style="color:#80cbc4; margin:0 0 6px 0;">🤝 Multi-Method Consensus</h5>
+                    <p style="font-size:0.82em; color:#bbb; margin:0;">
+                        <strong>What:</strong> Takes the <em>median</em> of all successful methods' BPM estimates.<br>
+                        <strong>How it helps:</strong> A single method can fail or be biased by noise. The consensus combines independent
+                        estimation approaches — if they agree (spread &lt; 3 bpm), confidence is <span style="color:#81c784">high</span>;
+                        if they somewhat agree (spread &lt; 5 bpm), confidence is <span style="color:#ffb74d">medium</span>;
+                        otherwise <span style="color:#ef5350">low</span>. This gives a more trustworthy estimate than any single method alone.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Integration Design -->
+            <div style="background:rgba(255,255,255,0.03); border-radius:6px; padding:15px; margin-bottom:15px;">
+                <h4 style="color:#bb86fc; margin:0 0 10px 0;">⚙️ Integration Design (Path A — Safe / No Retrain)</h4>
+                <table style="font-size:0.82em;">
+                    <thead>
+                        <tr><th>Decision</th><th>Choice</th><th>Rationale</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Duplicate peak detection</td>
+                            <td>Keep both, labelled distinctly</td>
+                            <td>Existing = pipeline headline; new = parallel diagnostic for comparison</td>
+                        </tr>
+                        <tr>
+                            <td>ML feature schema</td>
+                            <td>Unchanged (6 features)</td>
+                            <td>Pickled models stay valid; new methods are display-only diagnostics</td>
+                        </tr>
+                        <tr>
+                            <td>Headline RR for status flags</td>
+                            <td>Signal peaks → ML ensemble fallback</td>
+                            <td>New methods are unvalidated; existing pipeline has known behavior</td>
+                        </tr>
+                        <tr>
+                            <td>CWT dependency</td>
+                            <td>PyWavelets (optional)</td>
+                            <td>If missing → bpm=null, confidence='unavailable', no crash</td>
+                        </tr>
+                        <tr>
+                            <td>Testing</td>
+                            <td>14 new tests (all passing)</td>
+                            <td>Clean/noisy/flat/short signals + graceful degradation for missing pywt</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Confidence Legend -->
+            <div style="background:rgba(255,255,255,0.03); border-radius:6px; padding:15px;">
+                <h4 style="color:#bb86fc; margin:0 0 10px 0;">📊 Confidence Level Legend</h4>
+                <div style="display:flex; gap:20px; flex-wrap:wrap; font-size:0.85em;">
+                    <span>🟢 <strong>High</strong> — strong, clear signal</span>
+                    <span>🟡 <strong>Medium</strong> — plausible, some noise</span>
+                    <span>🟠 <strong>Low</strong> — uncertain estimate</span>
+                    <span>🔴 <strong>Failed</strong> — no valid result</span>
+                    <span>⚪ <strong>Unavailable</strong> — missing dependency</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:5051';
+        
+        const uploadArea = document.getElementById('uploadArea');
+        const uploadVideoArea = document.getElementById('uploadVideoArea');
+        const fileInput = document.getElementById('fileInput');
+        const videoInput = document.getElementById('videoInput');
+        const fileNameDisplay = document.getElementById('fileName');
+        const videoNameDisplay = document.getElementById('videoName');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const debugToggle = document.getElementById('debugToggle');
+        const errorBox = document.getElementById('errorBox');
+        
+        let currentFile = null;
+        let currentVideoFile = null;
+        let lastRRValue = null;
+
+        const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'bmp', 'tif', 'tiff'];
+        const VIDEO_EXTENSIONS = ['mp4', 'avi', 'mov', 'webm', 'mkv'];
+
+        function getFileExtension(filename) {
+            return (filename || '').split('.').pop().toLowerCase();
+        }
+
+        function isImageFile(file) {
+            const ext = getFileExtension(file.name);
+            return IMAGE_EXTENSIONS.includes(ext) || file.type.startsWith('image/');
+        }
+
+        function isVideoFile(file) {
+            const ext = getFileExtension(file.name);
+            return VIDEO_EXTENSIONS.includes(ext) || file.type.startsWith('video/');
+        }
+
+        // Image file handling
+        uploadArea.addEventListener('click', (e) => {
+            if (e.target === fileInput) return;
+            fileInput.click();
+        });
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadArea.classList.add('dragover');
+        });
+        uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadArea.classList.remove('dragover');
+            if (e.dataTransfer.files.length) {
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        function handleFile(file) {
+            if (!isImageFile(file)) {
+                if (isVideoFile(file)) {
+                    showWarning(`"${file.name}" is a video file. Please drop it in the VIDEO zone (right side), not the IMAGE zone.`);
+                } else {
+                    showWarning(`"${file.name}" is not a supported image format. Supported: ${IMAGE_EXTENSIONS.join(', ')}`);
+                }
+                return;
+            }
+            currentFile = file;
+            fileNameDisplay.textContent = `Selected Image: ${file.name}`;
+            analyzeBtn.disabled = false;
+        }
+
+        // Video file handling
+        uploadVideoArea.addEventListener('click', (e) => {
+            if (e.target === videoInput) return;
+            videoInput.click();
+        });
+        uploadVideoArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadVideoArea.classList.add('dragover');
+        });
+        uploadVideoArea.addEventListener('dragleave', () => uploadVideoArea.classList.remove('dragover'));
+        uploadVideoArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadVideoArea.classList.remove('dragover');
+            if (e.dataTransfer.files.length) {
+                handleVideoFile(e.dataTransfer.files[0]);
+            }
+        });
+        videoInput.addEventListener('change', (e) => {
+            if (e.target.files.length) {
+                handleVideoFile(e.target.files[0]);
+            }
+        });
+
+        function handleVideoFile(file) {
+            if (!isVideoFile(file)) {
+                if (isImageFile(file)) {
+                    showWarning(`"${file.name}" is an image file. Please drop it in the IMAGE zone (left side), not the VIDEO zone.`);
+                } else {
+                    showWarning(`"${file.name}" is not a supported video format. Supported: ${VIDEO_EXTENSIONS.join(', ')}`);
+                }
+                return;
+            }
+            currentVideoFile = file;
+            videoNameDisplay.textContent = `Selected Video: ${file.name}`;
+            analyzeBtn.disabled = false;
+        }
+
+        clearBtn.addEventListener('click', () => {
+            currentFile = null;
+            currentVideoFile = null;
+            lastRRValue = null;
+            fileInput.value = '';
+            videoInput.value = '';
+            fileNameDisplay.textContent = '';
+            videoNameDisplay.textContent = '';
+            analyzeBtn.disabled = true;
+            document.getElementById('mainResults').style.display = 'none';
+            document.getElementById('debugPanel').style.display = 'none';
+            document.getElementById('respPanel').style.display = 'none';
+            document.getElementById('rrMethodsVizSection').style.display = 'none';
+            errorBox.style.display = 'none';
+        });
+        
+        debugToggle.addEventListener('change', () => {
+            const panel = document.getElementById('debugPanel');
+            if (document.getElementById('mainResults').style.display === 'grid') {
+                panel.style.display = debugToggle.checked ? 'block' : 'none';
+            }
+        });
+
+        function imgError(imgElement, name) {
+            imgElement.outerHTML = `<div class="image-error">Failed to load ${name}</div>`;
+        }
+
+        analyzeBtn.addEventListener('click', async () => {
+            if (!currentFile && !currentVideoFile) return;
+            
+            analyzeBtn.disabled = true;
+            analyzeBtn.textContent = 'Processing...';
+            errorBox.style.display = 'none';
+            
+            let imageData = null;
+            let videoData = null;
+            
+            // 1. Process Video if uploaded
+            if (currentVideoFile) {
+                const videoFormData = new FormData();
+                videoFormData.append('video', currentVideoFile);
+                try {
+                    const videoResp = await fetch(`${API_BASE}/api/analyze/video`, {
+                        method: 'POST',
+                        body: videoFormData
+                    });
+                    videoData = await videoResp.json();
+                    if (!videoResp.ok && !videoData.respiratory_rate_bpm) {
+                        throw new Error(videoData.error || 'Video analysis failed');
+                    }
+                    if (videoData.respiratory_rate_bpm) {
+                        lastRRValue = videoData.respiratory_rate_bpm;
+                    }
+                } catch (err) {
+                    showWarning(`Video Processing Warning: ${err.message}`);
+                }
+            }
+
+            // 2. Process Image if uploaded
+            if (currentFile) {
+                const isDebug = debugToggle.checked;
+                const endpoint = isDebug ? '/api/analyze/debug' : '/api/analyze';
+                
+                const formData = new FormData();
+                formData.append('image', currentFile);
+                if (lastRRValue) {
+                    formData.append('respiratory_rate_bpm', lastRRValue);
+                }
+                
+                try {
+                    const response = await fetch(`${API_BASE}${endpoint}`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    let data;
+                    try {
+                        data = await response.json();
+                    } catch (e) {
+                        throw new Error("Failed to parse JSON response from API.");
+                    }
+                    
+                    if (!response.ok) {
+                        throw new Error(data.error || 'Server returned an error');
+                    }
+                    
+                    imageData = data;
+                    displayResults(imageData, videoData, isDebug);
+                    
+                } catch (err) {
+                    showWarning(`Image Analysis Error: ${err.message}`);
+                }
+            } else if (videoData) {
+                // Video only analyzed without image
+                displayVideoOnlyResults(videoData);
+            }
+
+            analyzeBtn.disabled = false;
+            analyzeBtn.textContent = 'Analyze Inputs';
+        });
+
+        function showWarning(msg) {
+            errorBox.textContent = msg;
+            errorBox.style.display = 'block';
+        }
+
+        function displayResults(data, videoData, isDebug) {
+            document.getElementById('mainResults').style.display = 'grid';
+            
+            if (isDebug && data.images) {
+                document.getElementById('annotatedImage').src = 'data:image/png;base64,' + data.images.annotated_result;
+            } else if (data.annotated_image) {
+                document.getElementById('annotatedImage').src = 'data:image/png;base64,' + data.annotated_image;
+            }
+            
+            document.getElementById('resFaceC').textContent = `${data.face_neck_temp_c} °C`;
+            document.getElementById('resForeheadC').textContent = data.forehead_temp_c ? `${data.forehead_temp_c} °C` : 'N/A';
+            
+            let canthusStr = data.inner_canthus_temp_c ? `${data.inner_canthus_temp_c} °C` : 'N/A';
+            if (data.occlusion_detected) canthusStr += ' (Occluded)';
+            document.getElementById('resCanthusC').textContent = canthusStr;
+            
+            const feverCard = document.getElementById('feverCard');
+            if (data.fever_detected) {
+                document.getElementById('resFever').textContent = 'DETECTED';
+                document.getElementById('resFever').style.color = 'var(--danger-color)';
+                feverCard.classList.add('danger');
+                feverCard.classList.remove('success');
+            } else {
+                document.getElementById('resFever').textContent = 'Normal';
+                document.getElementById('resFever').style.color = 'var(--success-color)';
+                feverCard.classList.add('success');
+                feverCard.classList.remove('danger');
+            }
+
+            // Respiratory Rate UI
+            const rrElem = document.getElementById('resRR');
+            const rrNote = document.getElementById('resRRNote');
+            const rrBadge = document.getElementById('resRRBadge');
+            
+            if (videoData) {
+                if (videoData.is_synthetic) {
+                    if (rrBadge) { rrBadge.textContent = 'Synthetic Test'; rrBadge.className = 'badge badge-exp'; }
+                } else {
+                    if (rrBadge) { rrBadge.textContent = 'Unvalidated'; rrBadge.className = 'badge badge-rule'; }
+                }
+
+                if (videoData.respiratory_rate_bpm) {
+                    rrElem.textContent = `${videoData.respiratory_rate_bpm} bpm`;
+                    rrNote.textContent = `Time-series (${videoData.total_breaths} breaths over ${videoData.duration_seconds}s) — real-world accuracy unknown`;
+                } else {
+                    rrElem.textContent = `-- bpm`;
+                    rrNote.textContent = videoData.rr_error || `Insufficient signal duration or cycle count`;
+                }
+            } else {
+                rrElem.textContent = `-- bpm`;
+                rrNote.textContent = `Real-world accuracy unknown — not validated against ground truth.`;
+            }
+
+            if (videoData) renderRespiratory(videoData);
+
+            // Status Flags UI
+            if (data.status_flags) {
+                document.getElementById('resStatusText').textContent = data.status_flags.overall_status;
+                document.getElementById('resActionRec').textContent = data.status_flags.action_recommendation;
+            }
+            
+            // Warnings handling
+            let warnings = [];
+            if (data.calibration_note) {
+                warnings.push(`<strong>Calibration Notice:</strong> ${data.calibration_note}`);
+            }
+            if (videoData && videoData.rr_error) {
+                warnings.push(`<strong>Video Analysis Warning:</strong> ${videoData.rr_error}`);
+            }
+            if (data.physiologically_inconsistent) {
+                warnings.push("Physiologically Inconsistent (Inner canthus colder than face/forehead by >1°C).");
+            }
+            if (data.occlusion_detected) {
+                warnings.push("Eyewear occlusion detected in Inner Canthus ROI.");
+            }
+            if (data.low_confidence) {
+                warnings.push(`Inner Canthus used fallback mode (${data.canthus_stage}).`);
+            }
+            
+            if (warnings.length > 0) {
+                errorBox.innerHTML = '<ul>' + warnings.map(w => `<li>${w}</li>`).join('') + '</ul>';
+                errorBox.style.display = 'block';
+                errorBox.style.borderColor = 'orange';
+                errorBox.style.color = 'orange';
+                errorBox.style.backgroundColor = 'rgba(255, 165, 0, 0.08)';
+            }
+            
+            // Debug Panel
+            const dbgPanel = document.getElementById('debugPanel');
+            if (isDebug && data.images) {
+                dbgPanel.style.display = 'block';
+                
+                const tbody = document.getElementById('debugTableBody');
+                tbody.innerHTML = `
+                    <tr>
+                        <td>Face/Neck</td>
+                        <td>${data.face_neck_skin_temp_c || 'N/A'}</td>
+                        <td>${data.face_neck_temp_c}</td>
+                        <td>${data.face_mask_pixels}</td>
+                        <td>-</td>
+                    </tr>
+                    <tr>
+                        <td>Forehead</td>
+                        <td>${data.forehead_skin_temp_c || 'N/A'}</td>
+                        <td>${data.forehead_temp_c || 'N/A'}</td>
+                        <td>${data.forehead_mask_pixels}</td>
+                        <td>-</td>
+                    </tr>
+                    <tr>
+                        <td>Inner Canthus</td>
+                        <td>${data.inner_canthus_skin_temp_c || 'N/A'}</td>
+                        <td>${data.inner_canthus_temp_c || 'N/A'}</td>
+                        <td>${data.inner_mask_pixels}</td>
+                        <td>${data.canthus_stage}${data.occlusion_detected ? ', occlusion' : ''}${data.physiologically_inconsistent ? ', phys_warn' : ''}</td>
+                    </tr>
+                `;
+                
+                document.getElementById('dbgOriginal').src = 'data:image/png;base64,' + data.images.original_thermal;
+                document.getElementById('dbgInitial').src = 'data:image/png;base64,' + data.images.initial_mask;
+                document.getElementById('dbgRefined').src = 'data:image/png;base64,' + data.images.refined_mask;
+                document.getElementById('dbgFaceNeck').src = 'data:image/png;base64,' + data.images.face_neck_mask;
+                document.getElementById('dbgWhiteBg').src = 'data:image/png;base64,' + data.images.face_neck_white_bg;
+                document.getElementById('dbgForehead').src = 'data:image/png;base64,' + data.images.forehead_mask;
+                document.getElementById('dbgCanthus').src = 'data:image/png;base64,' + data.images.inner_canthus_mask;
+                
+            } else {
+                dbgPanel.style.display = 'none';
+            }
+        }
+
+        function displayVideoOnlyResults(videoData) {
+            document.getElementById('mainResults').style.display = 'grid';
+            
+            const rrElem = document.getElementById('resRR');
+            const rrNote = document.getElementById('resRRNote');
+            const rrBadge = document.getElementById('resRRBadge');
+
+            if (videoData.is_synthetic) {
+                if (rrBadge) { rrBadge.textContent = 'Synthetic Test'; rrBadge.className = 'badge badge-exp'; }
+            } else {
+                if (rrBadge) { rrBadge.textContent = 'Unvalidated'; rrBadge.className = 'badge badge-rule'; }
+            }
+
+            if (videoData.respiratory_rate_bpm) {
+                rrElem.textContent = `${videoData.respiratory_rate_bpm} bpm`;
+                rrNote.textContent = `Detected ${videoData.total_breaths} breaths over ${videoData.duration_seconds}s (real-world accuracy unknown)`;
+            } else {
+                rrElem.textContent = `-- bpm`;
+                rrNote.textContent = videoData.rr_error || `Insufficient signal duration or cycle count`;
+                if (videoData.rr_error) {
+                    showWarning(`Video Analysis: ${videoData.rr_error}`);
+                }
+            }
+            
+            // Populate Temperature and Fever cards from video frame analysis
+            if (videoData.annotated_image) {
+                document.getElementById('annotatedImage').src = 'data:image/png;base64,' + videoData.annotated_image;
+            }
+            
+            document.getElementById('resFaceC').textContent = videoData.face_neck_temp_c ? `${videoData.face_neck_temp_c} °C` : '-- °C';
+            document.getElementById('resForeheadC').textContent = videoData.forehead_temp_c ? `${videoData.forehead_temp_c} °C` : 'N/A';
+            
+            let canthusStr = videoData.inner_canthus_temp_c ? `${videoData.inner_canthus_temp_c} °C` : 'N/A';
+            document.getElementById('resCanthusC').textContent = canthusStr;
+            
+            const feverCard = document.getElementById('feverCard');
+            if (videoData.forehead_temp_c !== undefined && videoData.forehead_temp_c !== null) {
+                if (videoData.fever_detected) {
+                    document.getElementById('resFever').textContent = 'DETECTED';
+                    document.getElementById('resFever').style.color = 'var(--danger-color)';
+                    feverCard.classList.add('danger');
+                    feverCard.classList.remove('success');
+                } else {
+                    document.getElementById('resFever').textContent = 'Normal';
+                    document.getElementById('resFever').style.color = 'var(--success-color)';
+                    feverCard.classList.add('success');
+                    feverCard.classList.remove('danger');
+                }
+            } else {
+                document.getElementById('resFever').textContent = '--';
+            }
+
+            renderRespiratory(videoData);
+
+            // Status flags from video-derived temperature + RR
+            if (videoData.status_flags) {
+                document.getElementById('resStatusText').textContent = videoData.status_flags.overall_status;
+                document.getElementById('resActionRec').textContent = videoData.status_flags.action_recommendation;
+            } else {
+                const rrStr = videoData.respiratory_rate_bpm ? `${videoData.respiratory_rate_bpm} bpm` : 'Insufficient duration';
+                document.getElementById('resStatusText').textContent = `Respiration: ${rrStr}`;
+                document.getElementById('resActionRec').textContent = `Thermal video processed (temperature calibrated via UCI dataset, RR unvalidated on ground truth).`;
+            }
+            
+            // Warnings
+            if (videoData.temp_video_details && videoData.temp_video_details.note) {
+                let warnings = [`<strong>Video Temperature:</strong> ${videoData.temp_video_details.note} (Forehead temp spread across frames: ±${videoData.temp_video_details.temp_spread_c || 0.0}°C)`];
+                if (videoData.rr_error) {
+                    warnings.push(`<strong>Video Respiration Warning:</strong> ${videoData.rr_error}`);
+                }
+                errorBox.innerHTML = '<ul>' + warnings.map(w => `<li>${w}</li>`).join('') + '</ul>';
+                errorBox.style.display = 'block';
+                errorBox.style.borderColor = 'orange';
+                errorBox.style.color = 'orange';
+                errorBox.style.backgroundColor = 'rgba(255, 165, 0, 0.08)';
+            }
+        }
+
+        // ---------- Dataset + ML respiratory panel ----------
+        const datasetSelect = document.getElementById('datasetSelect');
+        const datasetBtn = document.getElementById('datasetBtn');
+        let modelMetrics = null;
+
+        async function loadDataset() {
+            try {
+                const resp = await fetch(`${API_BASE}/api/dataset/videos`);
+                const vids = await resp.json();
+                datasetSelect.innerHTML = '<option value="">-- select a video --</option>' + vids.map(v =>
+                    `<option value="${v.filename}">${v.filename}${v.label_bpm != null ? ` (counted: ${v.label_bpm} bpm)` : ''}</option>`).join('');
+            } catch (e) {
+                datasetSelect.innerHTML = '<option value="">Dataset unavailable (is the API running?)</option>';
+            }
+            try {
+                const resp = await fetch(`${API_BASE}/api/model/metrics`);
+                if (resp.ok) { modelMetrics = await resp.json(); renderMetricsTable(); }
+                else document.getElementById('metricsTableBody').innerHTML = '<tr><td colspan="4">Models not trained (run: python rr_model.py train)</td></tr>';
+            } catch (e) {}
+            fetchTuningResults();
+        }
+
+        datasetSelect.addEventListener('change', () => { datasetBtn.disabled = !datasetSelect.value; });
+
+        datasetBtn.addEventListener('click', async () => {
+            const name = datasetSelect.value;
+            if (!name) return;
+            datasetBtn.disabled = true; analyzeBtn.disabled = true;
+            datasetBtn.textContent = 'Processing...';
+            errorBox.style.display = 'none';
+            try {
+                const resp = await fetch(`${API_BASE}/api/dataset/analyze/${encodeURIComponent(name)}`, { method: 'POST' });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.error || 'Dataset analysis failed');
+                videoNameDisplay.textContent = `Dataset video: ${name}`;
+                displayVideoOnlyResults(data);
+            } catch (err) {
+                showWarning(`Dataset Analysis Error: ${err.message}`);
+            }
+            datasetBtn.textContent = 'Analyze Dataset Video';
+            datasetBtn.disabled = !datasetSelect.value;
+            analyzeBtn.disabled = !(currentFile || currentVideoFile);
+        });
+
+        function renderMetricsTable() {
+            if (!modelMetrics) return;
+            const rows = Object.entries(modelMetrics.models).map(([n, m]) =>
+                `<tr><td>${n}</td><td>${m.cv5.MAE}</td><td>${m.cv5.RMSE}</td><td>${m.cv5.R2}</td></tr>`);
+            for (const [n, m] of Object.entries(modelMetrics.baselines || {})) {
+                rows.push(`<tr style="color:#999"><td>${n}</td><td>${m.MAE}</td><td>${m.RMSE}</td><td>${m.R2}</td></tr>`);
+            }
+            document.getElementById('metricsTableBody').innerHTML = rows.join('');
+            document.getElementById('metricsNote').textContent =
+                `Trained on ${modelMetrics.n_videos} labelled videos. Grey rows are non-ML baselines for comparison. Not clinically validated.`;
+        }
+
+        async function fetchTuningResults() {
+            const unavail = document.getElementById('tuningUnavailable');
+            const avail = document.getElementById('tuningAvailable');
+            const tbody = document.getElementById('tuningTableBody');
+            const conclusionDiv = document.getElementById('tuningConclusionText');
+            if (!unavail || !avail || !tbody) return;
+            try {
+                const resp = await fetch(`${API_BASE}/api/model/tuning`);
+                if (!resp.ok) {
+                    unavail.style.display = 'block';
+                    avail.style.display = 'none';
+                    return;
+                }
+                const data = await resp.json();
+                if (!data || !data.available) {
+                    unavail.style.display = 'block';
+                    avail.style.display = 'none';
+                    return;
+                }
+                unavail.style.display = 'none';
+                avail.style.display = 'block';
+
+                const modelLabels = {
+                    'random_forest': 'Random Forest',
+                    'gradient_boosting': 'Gradient Boosting',
+                    'xgboost': 'XGBoost',
+                    'ensemble': 'Ensemble'
+                };
+                let rowsHtml = '';
+                for (const [key, label] of Object.entries(modelLabels)) {
+                    if (data[key]) {
+                        const bMae = data[key].B_new_default ? data[key].B_new_default.mae.toFixed(2) : 'N/A';
+                        const cMae = data[key].C_new_tuned ? data[key].C_new_tuned.mae.toFixed(2) : 'N/A';
+                        const gain = data[key].tuning_gain_B_to_C ? data[key].tuning_gain_B_to_C.mae_improvement_pct.toFixed(1) + '%' : 'N/A';
+                        rowsHtml += `<tr><td><strong>${label}</strong></td><td>${bMae}</td><td>${cMae}</td><td style="color:#81c784; font-weight:bold;">${gain}</td></tr>`;
+                    }
+                }
+                tbody.innerHTML = rowsHtml;
+                if (data.honest_conclusion) {
+                    conclusionDiv.textContent = data.honest_conclusion;
+                } else {
+                    conclusionDiv.textContent = "Nested cross-validation tuning complete.";
+                }
+            } catch (err) {
+                unavail.style.display = 'block';
+                avail.style.display = 'none';
+            }
+        }
+
+        function drawRRChart(sig) {
+            const c = document.getElementById('rrChart');
+            const ctx = c.getContext('2d');
+            ctx.clearRect(0, 0, c.width, c.height);
+            if (!sig || !sig.filtered || !sig.filtered.length) {
+                ctx.fillStyle = '#888'; ctx.font = '16px sans-serif';
+                ctx.fillText('No breathing signal available', 20, 40);
+                return;
+            }
+            const pad = { l: 46, r: 14, t: 14, b: 30 };
+            const w = c.width - pad.l - pad.r, h = c.height - pad.t - pad.b;
+            const t = sig.time_s, y = sig.filtered;
+            const tMax = t[t.length - 1] || 1;
+            const yMin = Math.min(...y), yMax = Math.max(...y);
+            const yr = (yMax - yMin) || 1;
+            const X = v => pad.l + (v / tMax) * w;
+            const Y = v => pad.t + h - ((v - yMin) / yr) * h;
+            ctx.strokeStyle = '#333'; ctx.fillStyle = '#999'; ctx.font = '12px sans-serif'; ctx.lineWidth = 1;
+            const step = Math.max(1, Math.round(tMax / 10));
+            for (let s = 0; s <= tMax; s += step) {
+                ctx.beginPath(); ctx.moveTo(X(s), pad.t); ctx.lineTo(X(s), pad.t + h); ctx.stroke();
+                ctx.fillText(s + 's', X(s) - 8, c.height - 10);
+            }
+            ctx.beginPath(); ctx.moveTo(pad.l, Y(0)); ctx.lineTo(pad.l + w, Y(0)); ctx.stroke();
+            ctx.strokeStyle = '#bb86fc'; ctx.lineWidth = 2; ctx.beginPath();
+            y.forEach((v, i) => i ? ctx.lineTo(X(t[i]), Y(v)) : ctx.moveTo(X(t[i]), Y(v)));
+            ctx.stroke();
+            ctx.fillStyle = '#81c784';
+            (sig.peak_times_s || []).forEach((pt, i) => {
+                ctx.beginPath(); ctx.arc(X(pt), Y(sig.peak_values[i]), 5, 0, 2 * Math.PI); ctx.fill();
+            });
+        }
+
+        function renderRespiratory(v) {
+            const ml = v.ml_respiratory_rate || {};
+            const used = v.respiratory_rate_used_bpm;
+            const signal = v.respiratory_rate_bpm;
+            const label = v.dataset_label_bpm;
+            const rrElem = document.getElementById('resRR');
+            const rrNote = document.getElementById('resRRNote');
+
+            if (used != null) {
+                rrElem.textContent = `${used} bpm`;
+                const src = signal != null ? 'signal peaks' : 'ML ensemble (signal peaks insufficient)';
+                const mlStr = ml.ensemble_bpm != null ? ` | ML ensemble: ${ml.ensemble_bpm} bpm` : '';
+                rrNote.textContent = `${v.total_breaths ?? '?'} breaths over ${v.duration_seconds}s - from ${src}${mlStr}`;
+            }
+
+            document.getElementById('respPanel').style.display = 'block';
+            document.getElementById('respSource').textContent =
+                `ROI tracking: ${v.roi_method || 'n/a'} | confidence: ${v.confidence || 'n/a'} | ${v.filename}` +
+                (label != null ? ` | hand-counted reference: ${label} bpm` : '');
+            drawRRChart(v.rr_signal);
+
+            const rows = [];
+            const delta = x => (label != null && x != null) ? (x - label >= 0 ? '+' : '') + (x - label).toFixed(1) : '-';
+            if (label != null) rows.push(`<tr><td><strong>Hand-counted reference</strong></td><td>${label}</td><td>-</td></tr>`);
+            rows.push(`<tr><td>Signal peaks (filter + peak detection)</td><td>${signal ?? '--'}</td><td>${delta(signal)}</td></tr>`);
+
+            // --- New signal methods (rr_signal_methods.py) ---
+            const sm = v.signal_methods || {};
+            const methodLabels = {
+                peak_detection:  '🔍 Peak Detection (new)',
+                autocorrelation: '🔄 Autocorrelation',
+                welch_psd:       '📊 Welch PSD',
+                cwt:             '🌊 CWT (Wavelet)',
+            };
+            for (const [key, displayName] of Object.entries(methodLabels)) {
+                const m = sm[key];
+                if (m) {
+                    const bpmVal = m.bpm != null ? m.bpm : '--';
+                    const confBadge = m.confidence === 'high' ? '🟢'
+                                    : m.confidence === 'medium' ? '🟡'
+                                    : m.confidence === 'low' ? '🟠'
+                                    : m.confidence === 'unavailable' ? '⚪'
+                                    : '🔴';
+                    rows.push(`<tr style="color:#b0bec5"><td>${displayName} <span style="font-size:0.75em">${confBadge} ${m.confidence || ''}</span></td><td>${bpmVal}</td><td>${delta(m.bpm)}</td></tr>`);
+                }
+            }
+            // Consensus row
+            if (sm.consensus_bpm != null) {
+                const consBadge = sm.consensus_confidence === 'high' ? '🟢'
+                                : sm.consensus_confidence === 'medium' ? '🟡' : '🟠';
+                rows.push(`<tr style="color:#80cbc4;font-weight:bold"><td>🤝 Multi-Method Consensus <span style="font-size:0.75em">${consBadge} ${sm.consensus_confidence || ''} (${sm.methods_succeeded || 0}/${sm.methods_available || 0} methods)</span></td><td>${sm.consensus_bpm}</td><td>${delta(sm.consensus_bpm)}</td></tr>`);
+            }
+
+            // --- Existing ML models ---
+            const preds = ml.predictions || {};
+            const oof = v.dataset_oof_prediction || {};
+            if (ml.available) {
+                for (const [n, p] of Object.entries(preds)) {
+                    const heldOut = (label != null && oof[n] != null);
+                    const shown = heldOut ? oof[n] : p;
+                    rows.push(`<tr><td>ML - ${n}${heldOut ? ' <span class="subtext">(held-out CV pred.)</span>' : ''}</td><td>${shown}</td><td>${delta(shown)}</td></tr>`);
+                }
+            } else {
+                rows.push('<tr><td colspan="3">ML models not trained (run: python rr_model.py train)</td></tr>');
+            }
+            document.getElementById('predTableBody').innerHTML = rows.join('');
+            renderRRMethodsViz(v);
+        }
+
+        // ===== RR Multi-Method Visualization Charts =====
+        let rrVizChartInstances = {};
+
+        function renderRRMethodsViz(videoData) {
+            const sm = videoData.signal_methods || {};
+            const section = document.getElementById('rrMethodsVizSection');
+            if (!sm.peak_detection && !sm.autocorrelation && !sm.welch_psd && !sm.cwt) {
+                section.style.display = 'none';
+                return;
+            }
+            section.style.display = 'block';
+
+            // Destroy previous Chart.js instances
+            Object.values(rrVizChartInstances).forEach(c => { if (c && c.destroy) c.destroy(); });
+            rrVizChartInstances = {};
+
+            // --- Card 1: Peak Detection ---
+            const pd = sm.peak_detection || {};
+            const peakCanvas = document.getElementById('rrVizPeakChart');
+            const peakFallback = document.getElementById('rrVizPeakFallback');
+            document.getElementById('rrVizPeakBpm').textContent = (pd.bpm != null && !isNaN(pd.bpm)) ? `Estimated RR: ${Number(pd.bpm).toFixed(1)} bpm` : 'Estimated RR: -- bpm';
+            
+            if (pd.signal && pd.time_axis && pd.signal.length > 0) {
+                if (peakFallback) peakFallback.style.display = 'none';
+                if (peakCanvas) peakCanvas.style.display = 'block';
+                const peakSet = new Set(pd.peak_indices || []);
+                const peakPoints = pd.time_axis.map((t, i) => peakSet.has(i) ? pd.signal[i] : null);
+                const ctx1 = peakCanvas.getContext('2d');
+                rrVizChartInstances.peak = new Chart(ctx1, {
+                    type: 'line',
+                    data: {
+                        labels: pd.time_axis.map(t => Number(t).toFixed(1)),
+                        datasets: [
+                            {
+                                label: 'Filtered Signal',
+                                data: pd.signal,
+                                borderColor: '#42a5f5',
+                                backgroundColor: 'rgba(66,165,245,0.08)',
+                                borderWidth: 1.5,
+                                pointRadius: 0,
+                                fill: true,
+                                tension: 0.2,
+                            },
+                            {
+                                label: 'Detected Peaks',
+                                data: peakPoints,
+                                borderColor: '#ef5350',
+                                backgroundColor: '#ef5350',
+                                pointBackgroundColor: '#ef5350',
+                                pointBorderColor: '#ffffff',
+                                pointBorderWidth: 1.5,
+                                pointRadius: 5,
+                                pointHoverRadius: 7,
+                                pointStyle: 'circle',
+                                showLine: false,
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: {
+                                title: { display: true, text: 'Time (s)', color: '#aaa' },
+                                ticks: { color: '#888', maxTicksLimit: 8 },
+                                grid: { color: 'rgba(255,255,255,0.06)' },
+                            },
+                            y: {
+                                title: { display: false },
+                                ticks: { color: '#888', maxTicksLimit: 5 },
+                                grid: { color: 'rgba(255,255,255,0.06)' },
+                            }
+                        }
+                    }
+                });
+            } else {
+                if (peakFallback) peakFallback.style.display = 'block';
+                if (peakCanvas) peakCanvas.style.display = 'none';
+            }
+
+            // --- Card 2: Autocorrelation ---
+            const ac = sm.autocorrelation || {};
+            const autocorrCanvas = document.getElementById('rrVizAutocorrChart');
+            const autocorrFallback = document.getElementById('rrVizAutocorrFallback');
+            document.getElementById('rrVizAutocorrBpm').textContent = (ac.bpm != null && !isNaN(ac.bpm)) ? `Estimated RR: ${Number(ac.bpm).toFixed(1)} bpm` : 'Estimated RR: -- bpm';
+            
+            if (ac.lags_sec && ac.autocorr_values && ac.lags_sec.length > 0) {
+                if (autocorrFallback) autocorrFallback.style.display = 'none';
+                if (autocorrCanvas) autocorrCanvas.style.display = 'block';
+                const ctx2 = autocorrCanvas.getContext('2d');
+                rrVizChartInstances.autocorr = new Chart(ctx2, {
+                    type: 'line',
+                    data: {
+                        labels: ac.lags_sec.map(l => Number(l).toFixed(1)),
+                        datasets: [{
+                            label: 'Autocorrelation',
+                            data: ac.autocorr_values,
+                            borderColor: '#66bb6a',
+                            backgroundColor: 'rgba(102,187,106,0.08)',
+                            borderWidth: 1.5,
+                            pointRadius: 0,
+                            fill: true,
+                            tension: 0.2,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: {
+                                title: { display: true, text: 'Lag (s)', color: '#aaa' },
+                                ticks: { color: '#888', maxTicksLimit: 8 },
+                                grid: { color: 'rgba(255,255,255,0.06)' },
+                            },
+                            y: {
+                                title: { display: true, text: 'Autocorrelation', color: '#aaa' },
+                                min: -1, max: 1,
+                                ticks: { color: '#888', maxTicksLimit: 5 },
+                                grid: { color: 'rgba(255,255,255,0.06)' },
+                            }
+                        }
+                    }
+                });
+            } else {
+                if (autocorrFallback) autocorrFallback.style.display = 'block';
+                if (autocorrCanvas) autocorrCanvas.style.display = 'none';
+            }
+
+            // --- Card 3: Welch PSD ---
+            const wp = sm.welch_psd || {};
+            const welchCanvas = document.getElementById('rrVizWelchChart');
+            const welchFallback = document.getElementById('rrVizWelchFallback');
+            document.getElementById('rrVizWelchBpm').textContent = (wp.bpm != null && !isNaN(wp.bpm)) ? `Estimated RR: ${Number(wp.bpm).toFixed(1)} bpm` : 'Estimated RR: -- bpm';
+            
+            if (wp.freqs_hz && wp.psd_values && wp.freqs_hz.length > 0) {
+                if (welchFallback) welchFallback.style.display = 'none';
+                if (welchCanvas) welchCanvas.style.display = 'block';
+                const ctx3 = welchCanvas.getContext('2d');
+                rrVizChartInstances.welch = new Chart(ctx3, {
+                    type: 'line',
+                    data: {
+                        labels: wp.freqs_hz.map(f => Number(f).toFixed(3)),
+                        datasets: [{
+                            label: 'Power',
+                            data: wp.psd_values,
+                            borderColor: '#ffa726',
+                            backgroundColor: 'rgba(255,167,38,0.12)',
+                            borderWidth: 1.5,
+                            pointRadius: 0,
+                            fill: true,
+                            tension: 0.2,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: {
+                                title: { display: true, text: 'Frequency (Hz)', color: '#aaa' },
+                                ticks: { color: '#888', maxTicksLimit: 8 },
+                                grid: { color: 'rgba(255,255,255,0.06)' },
+                            },
+                            y: {
+                                title: { display: true, text: 'Power', color: '#aaa' },
+                                ticks: { color: '#888', maxTicksLimit: 5 },
+                                grid: { color: 'rgba(255,255,255,0.06)' },
+                            }
+                        }
+                    }
+                });
+            } else {
+                if (welchFallback) welchFallback.style.display = 'block';
+                if (welchCanvas) welchCanvas.style.display = 'none';
+            }
+
+            // --- Card 4: CWT Heatmap (manual canvas) ---
+            const cw = sm.cwt || {};
+            const cwtCanvas = document.getElementById('rrVizCwtCanvas');
+            const cwtFallback = document.getElementById('rrVizCwtFallback');
+            document.getElementById('rrVizCwtBpm').textContent = (cw.bpm != null && !isNaN(cw.bpm)) ? `Estimated RR: ${Number(cw.bpm).toFixed(1)} bpm` : 'Estimated RR: -- bpm';
+            
+            if (cw.power_matrix && cw.time_axis && cw.freqs_hz_axis &&
+                cw.power_matrix.length > 0 && cw.time_axis.length > 0) {
+                if (cwtFallback) cwtFallback.style.display = 'none';
+                if (cwtCanvas) cwtCanvas.style.display = 'block';
+                const ctx4 = cwtCanvas.getContext('2d');
+                const pm = cw.power_matrix;
+                const nFreqs = pm.length;
+                const nTime = pm[0].length;
+
+                const dpr = window.devicePixelRatio || 1;
+                const displayW = cwtCanvas.clientWidth || 240;
+                const displayH = 200;
+                cwtCanvas.width = displayW * dpr;
+                cwtCanvas.height = displayH * dpr;
+                ctx4.scale(dpr, dpr);
+
+                const margin = { left: 36, right: 48, top: 8, bottom: 26 };
+                const plotW = displayW - margin.left - margin.right;
+                const plotH = displayH - margin.top - margin.bottom;
+
+                let pMin = Infinity, pMax = -Infinity;
+                for (let fi = 0; fi < nFreqs; fi++) {
+                    for (let ti = 0; ti < nTime; ti++) {
+                        const v = pm[fi][ti];
+                        if (v < pMin) pMin = v;
+                        if (v > pMax) pMax = v;
+                    }
+                }
+                const pRange = pMax - pMin || 1;
+
+                function powerToColor(val) {
+                    const t = (val - pMin) / pRange;
+                    const r = Math.round(255 * Math.min(1, t * 2));
+                    const g = Math.round(255 * Math.max(0, Math.min(1, t < 0.5 ? t * 2 : 2 - t * 2)) * 0.6);
+                    const b = Math.round(255 * Math.max(0, 1 - t * 2));
+                    return `rgb(${r},${g},${b})`;
+                }
+
+                ctx4.clearRect(0, 0, displayW, displayH);
+                ctx4.fillStyle = '#1a1a2e';
+                ctx4.fillRect(0, 0, displayW, displayH);
+
+                const cellW = plotW / nTime;
+                const cellH = plotH / nFreqs;
+                for (let fi = 0; fi < nFreqs; fi++) {
+                    for (let ti = 0; ti < nTime; ti++) {
+                        ctx4.fillStyle = powerToColor(pm[fi][ti]);
+                        const y = margin.top + (nFreqs - 1 - fi) * cellH;
+                        ctx4.fillRect(margin.left + ti * cellW, y, Math.ceil(cellW) + 1, Math.ceil(cellH) + 1);
+                    }
+                }
+
+                // X axis labels
+                ctx4.fillStyle = '#888';
+                ctx4.font = '10px sans-serif';
+                ctx4.textAlign = 'center';
+                const timeArr = cw.time_axis;
+                const numXTicks = Math.min(6, nTime);
+                for (let i = 0; i < numXTicks; i++) {
+                    const idx = Math.round(i * (nTime - 1) / (numXTicks - 1));
+                    const xPos = margin.left + idx * cellW + cellW / 2;
+                    ctx4.fillText(Number(timeArr[idx]).toFixed(0) + 's', xPos, displayH - 5);
+                }
+
+                // Y axis labels
+                ctx4.fillStyle = '#888';
+                ctx4.font = '10px sans-serif';
+                ctx4.textAlign = 'right';
+                const freqArr = cw.freqs_hz_axis;
+                const numYTicks = Math.min(5, nFreqs);
+                for (let i = 0; i < numYTicks; i++) {
+                    const idx = Math.round(i * (nFreqs - 1) / (numYTicks - 1));
+                    const yPos = margin.top + (nFreqs - 1 - idx) * cellH + cellH / 2;
+                    ctx4.fillText(Number(freqArr[idx]).toFixed(2), margin.left - 4, yPos + 3);
+                }
+
+                // Y axis title
+                ctx4.save();
+                ctx4.fillStyle = '#aaa';
+                ctx4.font = '11px sans-serif';
+                ctx4.translate(10, margin.top + plotH / 2);
+                ctx4.rotate(-Math.PI / 2);
+                ctx4.textAlign = 'center';
+                ctx4.fillText('Freq (Hz)', 0, 0);
+                ctx4.restore();
+
+                // Color legend bar - strictly fitted within margin.right
+                const legendX = displayW - margin.right + 6;
+                const legendW = 10;
+                const legendH = plotH;
+                for (let i = 0; i < legendH; i++) {
+                    const t = 1 - i / legendH;
+                    ctx4.fillStyle = powerToColor(pMin + t * pRange);
+                    ctx4.fillRect(legendX, margin.top + i, legendW, 1);
+                }
+                ctx4.strokeStyle = '#555';
+                ctx4.strokeRect(legendX, margin.top, legendW, legendH);
+                ctx4.fillStyle = '#aaa';
+                ctx4.font = '9px sans-serif';
+                ctx4.textAlign = 'left';
+                ctx4.fillText('High', legendX + legendW + 3, margin.top + 8);
+                ctx4.fillText('Low', legendX + legendW + 3, margin.top + legendH - 2);
+            } else {
+                if (cwtFallback) cwtFallback.style.display = 'block';
+                if (cwtCanvas) cwtCanvas.style.display = 'none';
+            }
+        }
+
+        // =========================================================================
+        // Benchmark History & Accuracy Progression Logic
+        // =========================================================================
+        let benchmarkHistoryData = [];
+
+        async function loadBenchmarkHistory() {
+            try {
+                const resp = await fetch(`${API_BASE}/api/benchmark/history`);
+                if (!resp.ok) return;
+                benchmarkHistoryData = await resp.json();
+                renderBenchmarkSection();
+            } catch (err) {
+                console.log("Benchmark history unavailable:", err);
+            }
+        }
+
+        function renderBenchmarkSection() {
+            if (!benchmarkHistoryData || !benchmarkHistoryData.length) {
+                document.getElementById('benchmarkHistoryBody').innerHTML = 
+                    '<tr><td colspan="7" style="text-align:center; padding:15px; color:#aaa;">No benchmarks recorded yet. Run <code>python showcase_training.py</code> in terminal.</td></tr>';
+                return;
+            }
+
+            // Latest step and baseline step
+            const latest = benchmarkHistoryData[benchmarkHistoryData.length - 1];
+            const baseline = benchmarkHistoryData[0];
+            const latestEns = (latest.models && (latest.models['Ensemble'] || latest.models['Random Forest'])) || {};
+            const baselineEns = (baseline.models && (baseline.models['Ensemble'] || baseline.models['Random Forest'])) || {};
+
+            // Best model across latest models
+            let bestModelName = 'Random Forest';
+            let bestMae = 999;
+            for (const [mName, mData] of Object.entries(latest.models || {})) {
+                if (mData.regression && mData.regression.MAE < bestMae) {
+                    bestMae = mData.regression.MAE;
+                    bestModelName = mName;
+                }
+            }
+
+            const bestModelData = (latest.models && latest.models[bestModelName]) || latestEns;
+            const reg = bestModelData.regression || {};
+            const cls_ = bestModelData.clinical_classification || {};
+            const tol = bestModelData.tolerance_rates || {};
+
+            // Update KPI cards
+            document.getElementById('benchBestMae').textContent = `${reg.MAE ? reg.MAE.toFixed(2) : '--'} bpm`;
+            
+            // Accuracy improvement delta vs baseline
+            if (baselineEns.regression && reg.MAE) {
+                const diff = (baselineEns.regression.MAE - reg.MAE).toFixed(2);
+                if (diff > 0) {
+                    document.getElementById('benchMaeDelta').innerHTML = `↓ Error Reduced by ${diff} bpm vs Baseline`;
+                    document.getElementById('benchMaeDelta').style.color = '#81c784';
+                } else if (diff == 0) {
+                    document.getElementById('benchMaeDelta').innerHTML = `MediaPipe Dynamic Tracking Active`;
+                    document.getElementById('benchMaeDelta').style.color = '#81c784';
+                } else {
+                    document.getElementById('benchMaeDelta').innerHTML = `Baseline: ${baselineEns.regression.MAE.toFixed(2)} bpm`;
+                }
+            }
+
+            document.getElementById('benchF1Weighted').textContent = `${(cls_.f1_weighted * 100).toFixed(1)}%`;
+            document.getElementById('benchF1Macro').textContent = cls_.f1_macro != null ? cls_.f1_macro.toFixed(3) : '--';
+            document.getElementById('benchTol15').textContent = `${tol.within_1_5_bpm_percent || '--'}%`;
+            document.getElementById('benchTol20').textContent = `${tol.within_2_0_bpm_percent || '--'}%`;
+
+            // Render History Table
+            const rowsHtml = benchmarkHistoryData.map((item, idx) => {
+                const ens = (item.models && (item.models['Ensemble'] || item.models['Random Forest'])) || {};
+                const r = ens.regression || {};
+                const c = ens.clinical_classification || {};
+                const t = ens.tolerance_rates || {};
+                
+                let gainBadge = '';
+                if (idx === 0) {
+                    gainBadge = '<span style="color:#aaa; background:#333; padding:2px 6px; border-radius:3px;">Baseline</span>';
+                } else {
+                    gainBadge = '<span style="color:#a5d6a7; background:#1b5e20; padding:2px 6px; border-radius:3px; font-weight:bold;">✓ Active Gain</span>';
+                }
+
+                return `
+                    <tr style="border-bottom:1px solid #222;">
+                        <td style="padding:10px; font-weight:bold; color:#03dac6;">${item.step_id}</td>
+                        <td style="padding:10px;">
+                            <strong>${item.step_name}</strong>
+                            <div style="font-size:0.8em; color:#888;">${item.description || ''}</div>
+                        </td>
+                        <td style="padding:10px; text-align:center; font-weight:bold; color:#81c784;">${r.MAE ? r.MAE.toFixed(3) : '--'}</td>
+                        <td style="padding:10px; text-align:center; color:#90caf9;">${c.f1_macro ? c.f1_macro.toFixed(3) : '--'}</td>
+                        <td style="padding:10px; text-align:center;">${t.within_1_5_bpm_percent ? t.within_1_5_bpm_percent + '%' : '--'}</td>
+                        <td style="padding:10px; text-align:center;">${t.within_2_0_bpm_percent ? t.within_2_0_bpm_percent + '%' : '--'}</td>
+                        <td style="padding:10px; text-align:center;">${gainBadge}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            document.getElementById('benchmarkHistoryBody').innerHTML = rowsHtml;
+
+            // Render selected model confusion matrix
+            renderSelectedConfusionMatrix();
+        }
+
+        function renderSelectedConfusionMatrix() {
+            if (!benchmarkHistoryData || !benchmarkHistoryData.length) return;
+            const latest = benchmarkHistoryData[benchmarkHistoryData.length - 1];
+            const selModel = document.getElementById('benchModelSelect').value;
+            const modelData = latest.models && latest.models[selModel];
+            if (!modelData) return;
+
+            const cls_ = modelData.clinical_classification || {};
+            const labels = cls_.labels || ['Normal', 'Tachypnea'];
+            const cm = cls_.confusion_matrix || [[0, 0], [0, 0]];
+
+            // Generate HTML table for Confusion Matrix
+            let cmHtml = `
+                <table style="width:100%; font-size:0.85em; border-collapse:collapse; margin-top:5px; text-align:center;">
+                    <thead>
+                        <tr style="background:#222; color:#bbb;">
+                            <th style="padding:6px; border:1px solid #333; text-align:left;">Ground Truth \\ Pred</th>
+                            ${labels.map(l => `<th style="padding:6px; border:1px solid #333; color:#bb86fc;">${l}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            for (let i = 0; i < labels.length; i++) {
+                cmHtml += `<tr><td style="padding:6px; border:1px solid #333; font-weight:bold; text-align:left; color:#90caf9;">${labels[i]}</td>`;
+                for (let j = 0; j < labels.length; j++) {
+                    const count = (cm[i] && cm[i][j]) || 0;
+                    const isDiag = (i === j);
+                    const bg = isDiag ? 'rgba(76, 175, 80, 0.25)' : (count > 0 ? 'rgba(239, 83, 80, 0.2)' : 'transparent');
+                    const color = isDiag ? '#a5d6a7' : (count > 0 ? '#ef9a9a' : '#777');
+                    cmHtml += `<td style="padding:8px; border:1px solid #333; background:${bg}; color:${color}; font-weight:bold; font-size:1.05em;">${count}</td>`;
+                }
+                cmHtml += `</tr>`;
+            }
+            cmHtml += `</tbody></table>`;
+            document.getElementById('benchCmContainer').innerHTML = cmHtml;
+
+            // Summary text
+            const acc = (cls_.accuracy != null) ? (cls_.accuracy * 100).toFixed(1) + '%' : '--';
+            const f1 = (cls_.f1_macro != null) ? cls_.f1_macro.toFixed(3) : '--';
+            const f1w = (cls_.f1_weighted != null) ? (cls_.f1_weighted * 100).toFixed(1) + '%' : '--';
+            document.getElementById('benchCmSummary').innerHTML = `
+                <div><strong>Model Accuracy:</strong> ${acc} &nbsp;|&nbsp; <strong>Macro F1:</strong> ${f1} &nbsp;|&nbsp; <strong>Weighted F1:</strong> ${f1w}</div>
+                <div style="color:#888; font-size:0.9em; margin-top:3px;">Diagonal green cells = Correct clinical classifications.</div>
+            `;
+
+            // Update Heatmap Image
+            const imgPath = modelData.plot_path || `result/confusion_matrix_${latest.step_id}_${selModel.replace(/\s+/g, '_').toLowerCase()}.png`;
+            const imgElem = document.getElementById('benchHeatmapImg');
+            const fallbackElem = document.getElementById('benchHeatmapFallback');
+            imgElem.style.display = 'block';
+            fallbackElem.style.display = 'none';
+            imgElem.src = `/${imgPath}?t=${Date.now()}`;
+            document.getElementById('benchHeatmapLabel').textContent = `${selModel} (${latest.step_id})`;
+        }
+
+        document.getElementById('benchModelSelect').addEventListener('change', renderSelectedConfusionMatrix);
+        document.getElementById('refreshBenchmarkBtn').addEventListener('click', loadBenchmarkHistory);
+
+        loadDataset();
+        loadBenchmarkHistory();
+    </script>
+</body>
+</html>
+

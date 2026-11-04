@@ -1,0 +1,31 @@
+# Virtual environment
+.venv/
+env/
+venv/
+ENV/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Uploads and temporary generated debug runs
+uploads/
+result_*.png
+result_*.jpg
+result_*.jpeg
+roi_debug_*.png
+*_smoke_*.mp4
+
+# Dataset images (too large for GitHub)
+data set/
+
+# Large archives and downloaded zip packages
+*.zip
+
+# System and OS files
+.DS_Store
+Thumbs.db
+
+result/

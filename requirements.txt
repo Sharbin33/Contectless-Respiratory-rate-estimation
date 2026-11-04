@@ -1,0 +1,13 @@
+flask
+flask-cors
+opencv-python==4.11.0.86
+numpy<2
+scipy
+matplotlib
+scikit-learn
+pandas
+joblib
+xgboost
+mediapipe==0.10.14
+PyWavelets          # optional: CWT respiratory-rate method (degrades gracefully if missing)
+pytest
